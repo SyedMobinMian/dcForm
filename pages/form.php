@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once __DIR__ . '/../backend/config.php';
+require_once __DIR__ . '/../core/bootstrap.php';
 
 $allowedCountries = ['Canada', 'Vietnam', 'UK'];
 $forcedCountry = defined('FORM_COUNTRY') ? FORM_COUNTRY : '';
@@ -1250,7 +1250,7 @@ function loadStatesForCountry(countryId) {
         return;
     }
 
-    fetch('backend/ajax/get_states.php?country_id=' + encodeURIComponent(countryId))
+    fetch('modules/ajax/get_states.php?country_id=' + encodeURIComponent(countryId))
         .then(function(r) { return r.json(); })
         .then(function(states) {
             if (states.length) {
@@ -1357,7 +1357,7 @@ document.getElementById('sdc-state')?.addEventListener('sdc:select', function(e)
         return;
     }
 
-    fetch('backend/ajax/get_cities.php?state_id=' + encodeURIComponent(stateId))
+    fetch('modules/ajax/get_cities.php?state_id=' + encodeURIComponent(stateId))
         .then(function(r) { return r.json(); })
         .then(function(cities) {
             const items = cities.map(function(c) { return { id: c.name, name: c.name }; });
@@ -1395,7 +1395,7 @@ function loadEmployerStates(countryId) {
         return;
     }
 
-    fetch('backend/ajax/get_states.php?country_id=' + encodeURIComponent(countryId))
+    fetch('modules/ajax/get_states.php?country_id=' + encodeURIComponent(countryId))
         .then(function(r) { return r.json(); })
         .then(function(states) {
             const items = Array.isArray(states) ? states.map(function(s) { return { id: s.id, name: s.name }; }) : [];
@@ -1434,7 +1434,7 @@ function loadEmployerCities(stateId) {
         return;
     }
 
-    fetch('backend/ajax/get_cities.php?state_id=' + encodeURIComponent(stateId))
+    fetch('modules/ajax/get_cities.php?state_id=' + encodeURIComponent(stateId))
         .then(function(r) { return r.json(); })
         .then(function(cities) {
             const items = Array.isArray(cities) ? cities.map(function(c) { return { id: c.name, name: c.name }; }) : [];
@@ -1478,7 +1478,7 @@ function loadBirthCities(countryId) {
         return;
     }
 
-    fetch('backend/ajax/get_cities_by_country.php?country_id=' + encodeURIComponent(countryId))
+    fetch('modules/ajax/get_cities_by_country.php?country_id=' + encodeURIComponent(countryId))
         .then(function(r) { return r.json(); })
         .then(function(cities) {
             const items = Array.isArray(cities) ? cities.map(function(c) { return { id: c.id || c.name, name: c.name }; }) : [];
@@ -1524,7 +1524,7 @@ function loadBillingStates(countryId) {
         return;
     }
 
-    fetch('backend/ajax/get_states.php?country_id=' + encodeURIComponent(countryId))
+    fetch('modules/ajax/get_states.php?country_id=' + encodeURIComponent(countryId))
         .then(function(r) { return r.json(); })
         .then(function(states) {
             const rows = Array.isArray(states) ? states : [];
@@ -1554,7 +1554,7 @@ function loadBillingCities(stateId) {
     datalist.innerHTML = '';
     if (!stateId) return;
 
-    fetch('backend/ajax/get_cities.php?state_id=' + encodeURIComponent(stateId))
+    fetch('modules/ajax/get_cities.php?state_id=' + encodeURIComponent(stateId))
         .then(function(r) { return r.json(); })
         .then(function(cities) {
             const rows = Array.isArray(cities) ? cities : [];
@@ -1594,3 +1594,4 @@ window.FORM_DISPLAY_NAME = <?= json_encode($formCountry . ' Visa Application', J
 
 </body>
 </html>
+

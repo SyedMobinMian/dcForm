@@ -8,8 +8,8 @@
 
 header('Content-Type: application/json');
 session_start();
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../validate.php';
+require_once __DIR__ . '/../../core/config.php';
+require_once __DIR__ . '/../forms/validate.php';
 
 // --- Basic Checks ---
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonResponse(false, 'Invalid request.');
@@ -84,3 +84,4 @@ try {
     error_log("Passport Save Error: " . $e->getMessage());
     jsonResponse(false, 'Could not save passport details. Please check if data is correct.');
 }
+

@@ -4,6 +4,8 @@
 # Runtime-generated files
 uploads/receipts/*.pdf
 uploads/forms/*.pdf
+storage/*
+!storage/.gitignore
 
 # Dependencies (install via composer)
 vendor/

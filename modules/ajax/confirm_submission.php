@@ -8,9 +8,9 @@
 header('Content-Type: application/json');
 session_start();
 
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../send_email.php';
-require_once __DIR__ . '/../documents.php';
+require_once __DIR__ . '/../../core/config.php';
+require_once __DIR__ . '/../forms/send_email.php';
+require_once __DIR__ . '/../forms/documents.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonResponse(false, 'Invalid request.');
@@ -96,3 +96,5 @@ if (!$sent) {
 }
 
 jsonResponse(true, 'Details confirmed. Confirmation email sent successfully.', ['email_sent' => true, 'already_sent' => false]);
+
+

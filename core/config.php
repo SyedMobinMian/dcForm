@@ -82,6 +82,55 @@ function envBool(string $key, bool $default = false): bool {
     return in_array($raw, ['1', 'true', 'yes', 'on'], true);
 }
 
+function detectAppBasePath(): string {
+    $configured = trim(env('APP_BASE_PATH', ''));
+    if ($configured !== '') {
+        return '/' . trim($configured, '/');
+    }
+
+    $documentRoot = isset($_SERVER['DOCUMENT_ROOT']) ? realpath((string)$_SERVER['DOCUMENT_ROOT']) : false;
+    $projectRoot = realpath(dirname(__DIR__));
+
+    if ($documentRoot && $projectRoot) {
+        $doc = str_replace('\\', '/', $documentRoot);
+        $proj = str_replace('\\', '/', $projectRoot);
+        if (stripos($proj, $doc) === 0) {
+            $relative = trim(substr($proj, strlen($doc)), '/');
+            return $relative === '' ? '' : '/' . $relative;
+        }
+    }
+
+    $scriptName = trim((string)($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+    if ($scriptName === '') {
+        return '';
+    }
+
+    $segments = explode('/', $scriptName);
+    if (count($segments) <= 1) {
+        return '';
+    }
+
+    $appFolders = ['admin', 'backend', 'modules', 'assets', 'pages', 'core', 'app', 'includes'];
+
+    // Agar project domain root par mounted ho aur script /admin/* type ho to base path blank rahe.
+    if (in_array(strtolower($segments[0]), $appFolders, true)) {
+        return '';
+    }
+
+    // Agar project subfolder me mounted ho (e.g. /dcform/admin/*) to first segment hi base path hai.
+    if (isset($segments[1]) && in_array(strtolower($segments[1]), $appFolders, true)) {
+        return '/' . $segments[0];
+    }
+
+    return '/' . dirname($scriptName);
+}
+
+function detectAppUrl(): string {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = (string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost');
+    return rtrim($scheme . '://' . $host . detectAppBasePath(), '/');
+}
+
 // Root par optional .env (project/.env) load karo.
 loadEnvFile(dirname(__DIR__) . DIRECTORY_SEPARATOR . '.env');
 
@@ -117,7 +166,8 @@ define('RAZORPAY_KEY_SECRET', env('RAZORPAY_KEY_SECRET', ''));
 define('ADMIN_EMAIL', env('ADMIN_EMAIL', 'admin@yourdomain.com'));
 define('FROM_EMAIL', env('FROM_EMAIL', 'noreply@yourdomain.com'));
 define('FROM_NAME', env('FROM_NAME', 'dcForm Application'));
-define('APP_URL', rtrim(env('APP_URL', 'http://localhost/dcForm'), '/'));
+$appUrlEnv = trim(env('APP_URL', ''));
+define('APP_URL', $appUrlEnv !== '' ? rtrim($appUrlEnv, '/') : detectAppUrl());
 define('EMAIL_BCC_ADMIN', envBool('EMAIL_BCC_ADMIN', false));
 
 // SMTP credentials aur transport ki settings.

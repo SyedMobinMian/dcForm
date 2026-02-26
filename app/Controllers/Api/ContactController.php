@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../../backend/validate.php';
+require_once __DIR__ . '/../../../modules/forms/validate.php';
 require_once __DIR__ . '/../../Services/TravellerContactService.php';
 
 final class ContactController
@@ -50,4 +50,3 @@ final class ContactController
         jsonResponse(true, 'Contact details saved.', $saved);
     }
 }
-

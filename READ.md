@@ -361,3 +361,8 @@ Database import ho chuki ho
 ### 10.8 Zaroori Operational Note (Current State)
 - Is waqt root me `form-access.php` wrapper maujood nahi hai, jabke `admin/email.php` generated link `.../form-access.php?token=...` use karta hai.
 - Is wajah se token links break ho sakte hain jab tak root wrapper restore na ho ya `admin/email.php` link `pages/form-access.php` par switch na kiya jaye.
+
+## Line-by-Line Teaching Index
+- Detailed notes file: `docs/LINE_BY_LINE_TEACHING_NOTES.md`
+- Reading order: Batch 1 -> Batch 8
+- Format: function location, input, validation, flow, DB impact, output, dependencies, failure cases

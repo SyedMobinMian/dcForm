@@ -6,7 +6,7 @@
 
 header('Content-Type: application/json');
 session_start();
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../../core/config.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonResponse(false, 'Invalid request method.');
@@ -89,4 +89,6 @@ try {
     error_log('Review update error: ' . $e->getMessage());
     jsonResponse(false, 'Could not update traveller details.');
 }
+
+
 
