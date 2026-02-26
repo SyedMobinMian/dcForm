@@ -126,6 +126,9 @@ define('SMTP_PORT', (int)env('SMTP_PORT', '587'));
 define('SMTP_SECURE', strtolower(env('SMTP_SECURE', 'tls'))); // tls ya ssl
 define('SMTP_USERNAME', env('SMTP_USERNAME', ''));
 define('SMTP_PASSWORD', env('SMTP_PASSWORD', ''));
+// Local testing mode: SMTP bypass karke .eml files disk par save hoti hain.
+define('DEV_EMAIL_MODE', envBool('DEV_EMAIL_MODE', false));
+define('DEV_EMAIL_DIR', trim(env('DEV_EMAIL_DIR', 'uploads/dev-emails')));
 
 // Doosre runtime constants.
 define('ETA_FEE', (int)env('ETA_FEE', '7900'));

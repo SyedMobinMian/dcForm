@@ -87,7 +87,12 @@ logSystemEmail(
 );
 
 if (!$sent) {
-    jsonResponse(false, 'Details confirmed but email failed: ' . ($mailError ?: 'SMTP error.'));
+    // Email fail hone par payment flow block na karo; error DB logs me already store hota hai.
+    jsonResponse(true, 'Details confirmed. Proceeding to payment. Email failed: ' . ($mailError ?: 'SMTP error.'), [
+        'email_sent' => false,
+        'already_sent' => false,
+        'email_error' => (string)($mailError ?: 'SMTP error.'),
+    ]);
 }
 
 jsonResponse(true, 'Details confirmed. Confirmation email sent successfully.', ['email_sent' => true, 'already_sent' => false]);

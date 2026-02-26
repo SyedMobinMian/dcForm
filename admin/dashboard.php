@@ -5,6 +5,18 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/layout.php';
 requireAdmin();
 
+function metricIcon(string $icon): string {
+    return match ($icon) {
+        'received' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zm2 2v9h14V9H5zm7-6a4 4 0 0 1 4 4h-2a2 2 0 1 0-4 0H8a4 4 0 0 1 4-4z"/></svg>',
+        'pending' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm1 5h-2v6l5 3 1-1.7-4-2.3V7z"/></svg>',
+        'sent' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 4h20v16H2V4zm2 2v1l8 5 8-5V6H4zm16 12V9l-8 5-8-5v9h16z"/></svg>',
+        'travellers' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM8 12a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm0 2c-2.8 0-5 1.6-5 3.5V20h10v-2.5C13 15.6 10.8 14 8 14zm8-1c-3.3 0-6 1.8-6 4V20h12v-3c0-2.2-2.7-4-6-4z"/></svg>',
+        'groups' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm10 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3zM7 12c-2.2 0-4 1.2-4 2.8V18h8v-3.2C11 13.2 9.2 12 7 12zm10 0c-2.2 0-4 1.2-4 2.8V18h8v-3.2C21 13.2 19.2 12 17 12z"/></svg>',
+        'solo' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 12c-3.3 0-6 1.8-6 4v2h12v-2c0-2.2-2.7-4-6-4z"/></svg>',
+        default => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 3H5a2 2 0 0 0-2 2v14l4-3h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-8 9H8V6h3v6zm5 0h-3V9h3v3z"/></svg>',
+    };
+}
+
 $db = adminDB();
 
 // Dashboard cards ke counters yahan collect honge.
@@ -17,7 +29,7 @@ $stats = [
     'solo' => 0,
     'form_filled' => 0,
 ];
-
+ 
 // Har card ka count alag query se nikala ja raha hai.
 $stats['payment_receive'] = (int)$db->query("SELECT COUNT(*) FROM applications WHERE status IN ('paid','processing','approved') OR IFNULL(amount_paid,0) > 0")->fetchColumn();
 $stats['payment_pending'] = (int)$db->query("SELECT COUNT(*) FROM applications WHERE status IN ('draft','submitted') AND IFNULL(amount_paid,0) <= 0")->fetchColumn();
@@ -50,13 +62,13 @@ $kpis = [
 ];
 
 $cards = [
-    ['label' => 'Payment Received', 'value' => $stats['payment_receive']],
-    ['label' => 'Payment Pending', 'value' => $stats['payment_pending']],
-    ['label' => 'Form Sent', 'value' => $stats['form_sent']],
-    ['label' => 'All Travelers', 'value' => $stats['all_travellers']],
-    ['label' => 'Groups', 'value' => $stats['groups']],
-    ['label' => 'Solo', 'value' => $stats['solo']],
-    ['label' => 'Form Filled', 'value' => $stats['form_filled']],
+    ['label' => 'Payment Received', 'value' => $stats['payment_receive'], 'icon' => 'received'],
+    ['label' => 'Payment Pending', 'value' => $stats['payment_pending'], 'icon' => 'pending'],
+    ['label' => 'Form Sent', 'value' => $stats['form_sent'], 'icon' => 'sent'],
+    ['label' => 'All Travelers', 'value' => $stats['all_travellers'], 'icon' => 'travellers'],
+    ['label' => 'Groups', 'value' => $stats['groups'], 'icon' => 'groups'],
+    ['label' => 'Solo', 'value' => $stats['solo'], 'icon' => 'solo'],
+    ['label' => 'Form Filled', 'value' => $stats['form_filled'], 'icon' => 'sent'],
 ];
 
 $graph = [
@@ -101,8 +113,13 @@ renderAdminLayoutStart('Dashboard', 'dashboard');
 <div class="dashboard-cards">
     <?php foreach ($cards as $idx => $card): ?>
         <article class="metric-card metric-card-<?= ($idx % 6) + 1 ?>">
-            <h3><?= esc($card['label']) ?></h3>
-            <p><?= (int)$card['value'] ?></p>
+            <div class="metric-body">
+                <span class="metric-icon"><?= metricIcon((string)$card['icon']) ?></span>
+                <div class="metric-meta">
+                    <p><?= (int)$card['value'] ?></p>
+                    <h3 class="metric-title"><?= esc($card['label']) ?></h3>
+                </div>
+            </div>
         </article>
     <?php endforeach; ?>
 </div>

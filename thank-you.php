@@ -1,3 +1,7 @@
 <?php
 declare(strict_types=1);
-require __DIR__ . '/pages/thank-you.php';
+
+require_once __DIR__ . '/app/bootstrap.php';
+require_once __DIR__ . '/app/Controllers/Web/PageController.php';
+
+PageController::render('thank-you');

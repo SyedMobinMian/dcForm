@@ -12,6 +12,87 @@ if (is_file($autoload)) {
     require_once $autoload;
 }
 
+function detectMimeType(string $path): string {
+    if (function_exists('finfo_open')) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo) {
+            $mime = finfo_file($finfo, $path);
+            finfo_close($finfo);
+            if (is_string($mime) && $mime !== '') {
+                return $mime;
+            }
+        }
+    }
+    return 'application/octet-stream';
+}
+
+function writeDevEmailFile(
+    string $toEmail,
+    string $toName,
+    string $subject,
+    string $htmlBody,
+    ?string $replyToEmail,
+    ?string $replyToName,
+    array $attachments
+): array {
+    $relativeDir = trim(DEV_EMAIL_DIR, "/\\");
+    if ($relativeDir === '') {
+        $relativeDir = 'uploads/dev-emails';
+    }
+
+    $absDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $relativeDir);
+    if (!is_dir($absDir) && !mkdir($absDir, 0775, true) && !is_dir($absDir)) {
+        return [false, 'DEV_EMAIL_MODE enabled but unable to create directory: ' . $absDir];
+    }
+
+    $boundary = 'dcf_' . bin2hex(random_bytes(10));
+    $eml = '';
+    $eml .= 'Date: ' . date(DATE_RFC2822) . "\r\n";
+    $eml .= 'From: ' . FROM_NAME . ' <' . FROM_EMAIL . ">\r\n";
+    $eml .= 'To: ' . ($toName !== '' ? $toName . ' ' : '') . '<' . $toEmail . ">\r\n";
+    $eml .= 'Subject: ' . $subject . "\r\n";
+    $eml .= "MIME-Version: 1.0\r\n";
+
+    if ($replyToEmail && filter_var($replyToEmail, FILTER_VALIDATE_EMAIL)) {
+        $eml .= 'Reply-To: ' . ($replyToName ?: $replyToEmail) . ' <' . $replyToEmail . ">\r\n";
+    }
+
+    $eml .= 'Content-Type: multipart/mixed; boundary="' . $boundary . '"' . "\r\n\r\n";
+    $eml .= '--' . $boundary . "\r\n";
+    $eml .= "Content-Type: text/html; charset=UTF-8\r\n";
+    $eml .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+    $eml .= $htmlBody . "\r\n\r\n";
+
+    foreach ($attachments as $attachment) {
+        $path = (string)($attachment['path'] ?? '');
+        if ($path === '' || !is_file($path)) {
+            continue;
+        }
+
+        $name = (string)($attachment['name'] ?? basename($path));
+        $name = str_replace(["\r", "\n", '"'], ['', '', "'"], $name);
+        $mime = detectMimeType($path);
+        $content = chunk_split(base64_encode((string)file_get_contents($path)));
+
+        $eml .= '--' . $boundary . "\r\n";
+        $eml .= 'Content-Type: ' . $mime . '; name="' . $name . '"' . "\r\n";
+        $eml .= "Content-Transfer-Encoding: base64\r\n";
+        $eml .= 'Content-Disposition: attachment; filename="' . $name . '"' . "\r\n\r\n";
+        $eml .= $content . "\r\n";
+    }
+
+    $eml .= '--' . $boundary . "--\r\n";
+
+    $fileName = 'mail-' . date('Ymd-His') . '-' . bin2hex(random_bytes(3)) . '.eml';
+    $filePath = $absDir . DIRECTORY_SEPARATOR . $fileName;
+
+    if (file_put_contents($filePath, $eml) === false) {
+        return [false, 'Failed to write DEV email file.'];
+    }
+
+    return [true, null];
+}
+
 /**
  * PHPMailer ke zariye SMTP par HTML email bhejta hai.
  *
@@ -31,6 +112,11 @@ function sendSmtpMail(
     $toEmail = trim($toEmail);
     if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
         return [false, 'Invalid recipient email.'];
+    }
+
+    // Local development ke liye SMTP bypass aur .eml file output.
+    if (DEV_EMAIL_MODE) {
+        return writeDevEmailFile($toEmail, $toName, $subject, $htmlBody, $replyToEmail, $replyToName, $attachments);
     }
 
     // Zaroori SMTP settings .env/environment se aani chahiye.

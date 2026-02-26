@@ -143,8 +143,8 @@ main { margin-left: var(--sidebar-w); min-height: 100vh; }
 /* Dashboard: colorful animated metric cards + bar graph */
 .dashboard-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+    gap: 10px;
 }
 .metric-card {
     position: relative;
@@ -152,7 +152,7 @@ main { margin-left: var(--sidebar-w); min-height: 100vh; }
     color: #fff;
     border: 0;
     border-radius: 14px;
-    padding: 14px;
+    padding: 10px;
     box-shadow: 0 10px 24px rgba(17, 24, 39, 0.16);
     animation: cardPop .45s ease both;
 }
@@ -165,17 +165,44 @@ main { margin-left: var(--sidebar-w); min-height: 100vh; }
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.2);
 }
-.metric-card h3 {
-    margin: 0 0 6px;
-    color: rgba(255, 255, 255, 0.92);
-    font-size: .86rem;
-    font-weight: 600;
-}
 .metric-card p {
     margin: 0;
-    font-size: 1.75rem;
-    line-height: 1.1;
+    font-size: 1.5rem;
+    line-height: 1;
     font-weight: 700;
+}
+.metric-title {
+    margin: 4px 0 0;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .01em;
+}
+.metric-body {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.metric-meta {
+    display: grid;
+    align-items: center;
+    min-width: 0;
+}
+.metric-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+.metric-icon svg {
+    width: 15px;
+    height: 15px;
+    fill: #fff;
 }
 .metric-card-1 { background: linear-gradient(135deg, #1d4ed8, #2563eb); }
 .metric-card-2 { background: linear-gradient(135deg, #ea580c, #f97316); }

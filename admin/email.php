@@ -115,6 +115,7 @@ if (in_array($logStatus, ['sent', 'failed'], true)) {
     $where[] = 'l.send_status = :send_status';
     $params[':send_status'] = $logStatus;
 }
+
 if ($logEmail !== '') {
     $where[] = 'l.recipient_email = :recipient_email';
     $params[':recipient_email'] = $logEmail;
@@ -142,7 +143,7 @@ $logs = $logsStmt->fetchAll();
 renderAdminLayoutStart('Email', 'email');
 ?>
 <form method="post" class="panel">
-    <h3>Send Form Link Email</h3>
+    <h3>Send Form Link</h3>
 
     <label>Traveller (required for token link)</label>
     <select name="traveller_id" required>
@@ -173,7 +174,7 @@ renderAdminLayoutStart('Email', 'email');
     </small>
 
     <input type="hidden" name="csrf_token" value="<?= esc(csrfToken()) ?>">
-    <button type="submit">Send Email</button>
+    <button type="submit">Send Link</button>
 </form>
 
 <h3>Recent Email Logs</h3>

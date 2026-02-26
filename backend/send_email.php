@@ -187,16 +187,17 @@ function sendFormSubmittedEmail(array $application, array $travellers, array $at
     $totalPax = max(1, count($travellers));
 
     $safeName = $toName !== '' ? $toName : 'Applicant';
-    $subject = "Application Received | " . $country . " | Ref " . $reference;
+    $subject = "Congratulations! Application Submitted | " . $country . " | Ref " . $reference;
     $body = buildResponsiveEmailHtml(
-        'Your application has been received successfully.',
-        'Application Submitted',
+        'Congratulations! Your application has been received successfully.',
+        'Congratulations! Application Submitted',
         $safeName,
-        'We have received your ' . $country . ' application and our team has started the initial review.',
+        'Congratulations. We have successfully received your ' . $country . ' application and our team has started the initial review.',
         [
             ['label' => 'Reference Number', 'value' => $reference !== '' ? $reference : 'N/A'],
             ['label' => 'Country', 'value' => $country],
             ['label' => 'Total Travellers', 'value' => (string)$totalPax],
+            ['label' => 'Submitted At', 'value' => date('Y-m-d H:i:s')],
             ['label' => 'Status', 'value' => 'Submitted'],
         ],
         [
@@ -230,6 +231,7 @@ function sendPaymentConfirmationEmail(array $application, string $paymentId, int
     $plan = ucfirst($application['processing_plan'] ?? 'Standard');
     $toEmail = $application['primary_email'] ?? '';
     $toName = $application['primary_name'] ?? 'Applicant';
+    $paymentDateTime = (string)($application['payment_datetime'] ?? date('Y-m-d H:i:s'));
     // Paise ko formatted INR me convert karo.
     $amount = 'INR ' . number_format($amountPaise / 100, 2);
 
@@ -244,6 +246,7 @@ function sendPaymentConfirmationEmail(array $application, string $paymentId, int
             ['label' => 'Reference Number', 'value' => $reference !== '' ? $reference : 'N/A'],
             ['label' => 'Payment ID', 'value' => $paymentId !== '' ? $paymentId : 'N/A'],
             ['label' => 'Amount Paid', 'value' => $amount],
+            ['label' => 'Payment Date & Time', 'value' => $paymentDateTime],
             ['label' => 'Processing Plan', 'value' => $plan],
         ],
         [

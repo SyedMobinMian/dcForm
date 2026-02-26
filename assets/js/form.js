@@ -12,6 +12,7 @@ const BASE = 'backend/ajax/';
 let currentTraveller = 1;
 let totalTravellers  = 1;
 let travelMode       = 'solo';
+let reviewTravellersCache = {};
 
 // â”€â”€ CSRF token â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function csrf() {
@@ -178,26 +179,195 @@ function showVal(v) {
     return s === '' ? '-' : escHtml(s);
 }
 
+const REVIEW_FIELD_LABELS = {
+    first_name: 'First Name',
+    middle_name: 'Middle Name',
+    last_name: 'Last Name',
+    email: 'Email',
+    phone: 'Phone',
+    travel_date: 'Intended Travel Date',
+    purpose_of_visit: 'Purpose of Visit',
+    date_of_birth: 'Date of Birth',
+    gender: 'Gender',
+    country_of_birth: 'Country of Birth',
+    city_of_birth: 'City of Birth',
+    marital_status: 'Marital Status',
+    nationality: 'Nationality',
+    passport_country: 'Passport Country',
+    passport_number: 'Passport Number',
+    passport_issue_date: 'Passport Issue Date',
+    passport_expiry: 'Passport Expiry Date',
+    dual_citizen: 'Dual Citizenship',
+    other_citizenship_country: 'Other Citizenship Country',
+    prev_canada_app: 'Previously Applied to Canada',
+    uci_number: 'UCI / Previous Visa Number',
+    occupation: 'Occupation',
+    job_title: 'Job Title',
+    employer_name: 'Employer Name',
+    education_level: 'Education Level',
+    funds_available: 'Funds Available',
+    address_line: 'Address Line',
+    street_number: 'Street Number',
+    country: 'Residential Country',
+    state: 'State / Province',
+    city: 'Residential City',
+    postal_code: 'Postal Code',
+    emergency_contact_name: 'Emergency Contact Name',
+    emergency_contact_phone: 'Emergency Contact Phone',
+    emergency_contact_email: 'Emergency Contact Email',
+    step_completed: 'Current Step'
+};
+
+const REVIEW_FIELD_ORDER = [
+    'first_name','middle_name','last_name','email','phone',
+    'travel_date','purpose_of_visit','date_of_birth','gender',
+    'country_of_birth','city_of_birth','marital_status','nationality',
+    'passport_country','passport_number','passport_issue_date','passport_expiry',
+    'dual_citizen','other_citizenship_country','prev_canada_app','uci_number',
+    'occupation','job_title','employer_name','education_level','funds_available',
+    'address_line','street_number','country','state','city','postal_code',
+    'emergency_contact_name','emergency_contact_phone','emergency_contact_email','step_completed'
+];
+
+const REVIEW_SKIP_FIELDS = new Set([
+    'id','created_at','updated_at','traveller_number',
+    'decl_accurate','decl_terms'
+]);
+
+function fieldLabel(key) {
+    if (REVIEW_FIELD_LABELS[key]) return REVIEW_FIELD_LABELS[key];
+    return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function formatReviewValue(key, raw) {
+    const v = String(raw ?? '').trim();
+    if (v === '') return '-';
+    if (['dual_citizen', 'prev_canada_app'].includes(key)) {
+        if (v === '1') return 'Yes';
+        if (v === '0') return 'No';
+    }
+    return v;
+}
+
+function buildTravellerFieldsGrid(t) {
+    const keys = Object.keys(t || {}).filter(k => !REVIEW_SKIP_FIELDS.has(k));
+    const ordered = [
+        ...REVIEW_FIELD_ORDER.filter(k => keys.includes(k)),
+        ...keys.filter(k => !REVIEW_FIELD_ORDER.includes(k)).sort()
+    ];
+
+    return ordered.map(key => `
+        <div class="col-md-4 col-sm-6">
+            <small class="text-muted">${escHtml(fieldLabel(key))}</small>
+            <div>${showVal(formatReviewValue(key, t[key]))}</div>
+        </div>
+    `).join('');
+}
+
+function updatePaymentSummary() {
+    const box = document.querySelector('#card-payment .amz-summary-box');
+    if (!box) return;
+
+    const fee = parseFloat(box.dataset.fee || '0') || 0;
+    const plan = document.querySelector('input[name="plan"]:checked')?.value || 'standard';
+    const multiplier = plan === 'priority' ? 1.5 : 1;
+    const travellers = Math.max(1, parseInt(String(totalTravellers || 1), 10));
+    const total = fee * travellers * multiplier;
+
+    const setText = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    setText('sum-travellers', String(travellers));
+    setText('sum-plan', plan === 'priority' ? 'Priority' : 'Standard');
+    setText('sum-fee', `INR ${fee.toFixed(2)}`);
+    setText('sum-total', `INR ${total.toFixed(2)}`);
+}
+
+function getReviewEditInput(key, value) {
+    const v = String(value ?? '');
+    const safeVal = escHtml(v);
+
+    if (['dual_citizen', 'prev_canada_app', 'has_job', 'visa_refusal', 'tuberculosis', 'criminal_history', 'decl_accurate', 'decl_terms'].includes(key)) {
+        const yesSel = v === '1' ? 'selected' : '';
+        const noSel = v === '0' ? 'selected' : '';
+        return `
+            <select class="form-select" name="rv_${escHtml(key)}">
+                <option value="1" ${yesSel}>Yes</option>
+                <option value="0" ${noSel}>No</option>
+            </select>
+        `;
+    }
+
+    if (['travel_date', 'date_of_birth', 'passport_issue_date', 'passport_expiry'].includes(key)) {
+        return `<input type="date" class="form-control" name="rv_${escHtml(key)}" value="${safeVal}">`;
+    }
+
+    if (key === 'email') {
+        return `<input type="email" class="form-control" name="rv_${escHtml(key)}" value="${safeVal}">`;
+    }
+
+    return `<input type="text" class="form-control" name="rv_${escHtml(key)}" value="${safeVal}">`;
+}
+
+function openReviewEditModal(e, travellerNum) {
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+    const t = reviewTravellersCache[travellerNum];
+    if (!t) {
+        showToast('Traveller details not loaded yet.', 'error');
+        return;
+    }
+
+    const fieldsHost = document.getElementById('review-edit-fields');
+    const travellerNumInput = document.getElementById('review-edit-traveller-num');
+    if (!fieldsHost || !travellerNumInput) return;
+
+    travellerNumInput.value = String(travellerNum);
+
+    const keys = Object.keys(t || {}).filter(k => !REVIEW_SKIP_FIELDS.has(k));
+    const ordered = [
+        ...REVIEW_FIELD_ORDER.filter(k => keys.includes(k)),
+        ...keys.filter(k => !REVIEW_FIELD_ORDER.includes(k)).sort()
+    ];
+
+    fieldsHost.innerHTML = ordered.map(key => `
+        <div class="col-md-4 col-sm-6">
+            <label class="form-label">${escHtml(fieldLabel(key))}</label>
+            ${getReviewEditInput(key, t[key] ?? '')}
+        </div>
+    `).join('');
+
+    const modalEl = document.getElementById('reviewEditModal');
+    if (!modalEl || typeof bootstrap === 'undefined') return;
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
+
 async function buildReviewList() {
     const list = document.getElementById('travellers-review-list');
-    if (!list) return;
-    list.innerHTML = '<p class="text-center text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</p>';
+    const paymentList = document.getElementById('payment-review-list');
+    if (!list && !paymentList) return;
+
+    const loading = '<p class="text-center text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</p>';
+    if (list) list.innerHTML = loading;
+    if (paymentList) paymentList.innerHTML = loading;
 
     try {
+        reviewTravellersCache = {};
         const rows = [];
         for (let i = 1; i <= totalTravellers; i++) {
             const res  = await fetch(`${BASE}get_traveller.php?traveller_num=${i}`);
             const data = await res.json();
             if (data.success && data.traveller) {
                 const t = data.traveller;
-                const dob = t.date_of_birth || '-';
+                reviewTravellersCache[i] = t;
                 const fullName = `${t.first_name || ''} ${t.last_name || ''}`.trim() || 'N/A';
                 const formStatus = (t.decl_accurate === '1' || t.decl_accurate === 1) && (t.decl_terms === '1' || t.decl_terms === 1)
                     ? 'Completed'
                     : (t.step_completed || 'In Progress');
 
                 rows.push(`
-                    <div class="traveler-row" onclick="editTraveller(${i})">
+                    <div class="traveler-row">
                         <div style="width:100%;">
                             <div class="traveler-info">
                                 <div class="traveler-icon"><i class="fas fa-user"></i></div>
@@ -205,21 +375,13 @@ async function buildReviewList() {
                                     <span class="label">Traveller ${i}</span>
                                     <span class="name">${escHtml(fullName)}</span>
                                 </div>
-                                <div class="edit-arrow ms-auto"><i class="fas fa-chevron-right"></i></div>
+                                <button type="button" class="btn btn-sm btn-outline-primary ms-auto" onclick="openReviewEditModal(event, ${i})">
+                                    <i class="fas fa-edit me-1"></i>Edit
+                                </button>
                             </div>
                             <div class="row g-2 mt-2">
-                                <div class="col-md-4"><small class="text-muted">Email</small><div>${showVal(t.email)}</div></div>
-                                <div class="col-md-4"><small class="text-muted">Phone</small><div>${showVal(t.phone)}</div></div>
-                                <div class="col-md-4"><small class="text-muted">DOB</small><div>${showVal(dob)}</div></div>
-                                <div class="col-md-4"><small class="text-muted">Nationality</small><div>${showVal(t.nationality)}</div></div>
-                                <div class="col-md-4"><small class="text-muted">Passport No</small><div>${showVal(t.passport_number)}</div></div>
-                                <div class="col-md-4"><small class="text-muted">Travel Date</small><div>${showVal(t.travel_date)}</div></div>
-                                <div class="col-md-6"><small class="text-muted">Residential Address</small><div>${showVal(t.address_line)} ${showVal(t.street_number)}</div></div>
-                                <div class="col-md-3"><small class="text-muted">Country / City</small><div>${showVal(t.country)} / ${showVal(t.city)}</div></div>
-                                <div class="col-md-3"><small class="text-muted">Postal</small><div>${showVal(t.postal_code)}</div></div>
-                                <div class="col-md-4"><small class="text-muted">Occupation</small><div>${showVal(t.occupation)}</div></div>
-                                <div class="col-md-4"><small class="text-muted">Employer</small><div>${showVal(t.employer_name)}</div></div>
-                                <div class="col-md-4"><small class="text-muted">Form Status</small><div>${showVal(formStatus)}</div></div>
+                                ${buildTravellerFieldsGrid(t)}
+                                <div class="col-md-4 col-sm-6"><small class="text-muted">Form Status</small><div>${showVal(formStatus)}</div></div>
                             </div>
                         </div>
                     </div>`);
@@ -240,9 +402,13 @@ async function buildReviewList() {
                 </div>
             </div>`;
 
-        list.innerHTML = appSummary + (rows.join('') || '<p class="text-muted text-center">No travellers found.</p>');
+        const reviewHtml = appSummary + (rows.join('') || '<p class="text-muted text-center">No travellers found.</p>');
+        if (list) list.innerHTML = reviewHtml;
+        if (paymentList) paymentList.innerHTML = reviewHtml;
     } catch(e) {
-        list.innerHTML = '<p class="text-danger text-center">Could not load traveller details.</p>';
+        const errorHtml = '<p class="text-danger text-center">Could not load traveller details.</p>';
+        if (list) list.innerHTML = errorHtml;
+        if (paymentList) paymentList.innerHTML = errorHtml;
     }
 }
 function editTraveller(num) {
@@ -317,6 +483,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         navTo('card-traveller-added');
                     } else {
                         buildReviewList();
+                        updatePaymentSummary();
                         navTo('card-confirm');
                     }
                 })
@@ -355,6 +522,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btn-add-another-traveller')?.addEventListener('click', function() {
         totalTravellers = Math.max(totalTravellers, currentTraveller + 1);
         travelMode = 'group';
+        updatePaymentSummary();
         document.getElementById('btn-add-next-traveller')?.click();
     });
 
@@ -384,7 +552,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 showToast(data.message || 'Details confirmed successfully.', 'success');
-                navTo('card-payment');
+                buildReviewList().finally(() => {
+                    updatePaymentSummary();
+                    navTo('card-payment');
+                });
             })
             .catch(err => {
                 hideLoader();
@@ -406,8 +577,48 @@ document.addEventListener('DOMContentLoaded', function() {
         initiatePayment();
     });
 
+    document.getElementById('review-edit-form')?.addEventListener('submit', function(ev) {
+        ev.preventDefault();
+        const form = ev.currentTarget;
+        const fd = new FormData(form);
+        fd.append('csrf_token', csrf());
+
+        showLoader('Updating traveller details...');
+        fetch(BASE + 'update_traveller_review.php', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(data => {
+                hideLoader();
+                if (!data.success) {
+                    showToast(data.message || 'Could not update details.', 'error');
+                    return;
+                }
+
+                const modalEl = document.getElementById('reviewEditModal');
+                if (modalEl && typeof bootstrap !== 'undefined') {
+                    bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                }
+                showToast(data.message || 'Traveller updated.', 'success');
+                buildReviewList();
+            })
+            .catch(err => {
+                hideLoader();
+                showToast('Network error: ' + err.message, 'error');
+            });
+    });
+
     // Init first card validation
     if (typeof EtaValidator !== 'undefined') EtaValidator.attachLiveValidation('card-contact');
+    updatePaymentSummary();
+    document.querySelectorAll('input[name="plan"]').forEach(el => {
+        el.addEventListener('change', updatePaymentSummary);
+    });
+
+    if (window.DEV_START_CARD === 'card-payment') {
+        buildReviewList().finally(() => {
+            updatePaymentSummary();
+            navTo('card-payment');
+        });
+    }
 });
 
 // â”€â”€ Razorpay Payment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

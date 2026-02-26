@@ -12,6 +12,17 @@ $formContainerId = 'form-container-' . strtolower($formCountry);
 $formDisplayTitle = $formCountry . ' Visa Application';
 $_SESSION['form_country'] = $formCountry;
 
+$envName = strtolower(env('APP_ENV', ''));
+$isLocalEnv = in_array($envName, ['local', 'development', 'dev'], true)
+    || in_array(($_SERVER['SERVER_NAME'] ?? ''), ['localhost', '127.0.0.1'], true);
+$devStartCard = '';
+if ($isLocalEnv) {
+    $dev = strtolower(trim((string)($_GET['dev'] ?? '')));
+    if ($dev === 'payment') {
+        $devStartCard = 'card-payment';
+    }
+}
+
 $db = getDB();
 
 // DB se data load karo
@@ -731,7 +742,8 @@ function countryOpts(array $countries, string $placeholder = 'Select country...'
 
             <div class="alert alert-info mt-3">
                 <i class="fas fa-info-circle me-2"></i>
-                Neeche di gayi tamam details ko dhyan se verify karein. Agar kisi traveller ki details edit karni ho to us card par click karein.
+                <!-- Neeche di gayi tamam details ko dhyan se verify karein. Agar kisi traveller ki details edit karni ho to us card par click karein. -->
+                 Please ensure all provided details are accurate. To modify traveler information, select the respective card.
             </div>
 
             <!-- Processing Plan -->
@@ -756,7 +768,8 @@ function countryOpts(array $countries, string $placeholder = 'Select country...'
             <div class="form-check mt-4">
                 <input class="form-check-input" type="checkbox" id="confirm-details-check">
                 <label class="form-check-label" for="confirm-details-check">
-                    Main confirm karta/karti hoon ke meri tamam details sahi hain aur main payment proceed karna chahta/chahti hoon.
+                    <!-- Main confirm karta/karti hoon ke meri tamam details sahi hain aur main payment proceed karna chahta/chahti hoon. -->
+                     I verify that all details are accurate. Proceed to payment.
                 </label>
             </div>
 
@@ -780,6 +793,18 @@ function countryOpts(array $countries, string $placeholder = 'Select country...'
     <div class="mini-card" id="card-payment">
         <div class="header-title">Payment Details</div>
         <div class="body-content">
+            <div class="amz-checkout">
+                <div class="amz-main">
+            <div class="review-section mb-4">
+                <div class="review-title-head">
+                    <h6><i class="fas fa-user-check me-2"></i> Review Traveller Details</h6>
+                </div>
+                <div class="p-3" id="payment-review-list">
+                    <p class="text-center text-muted py-2 mb-0">
+                        <i class="fas fa-spinner fa-spin me-2"></i> Loading review details...
+                    </p>
+                </div>
+            </div>
 
             <!-- Card Info -->
             <div class="review-section mb-4">
@@ -882,6 +907,21 @@ function countryOpts(array $countries, string $placeholder = 'Select country...'
                     </div>
                 </div>
             </div>
+                </div>
+                <aside class="amz-side">
+                    <div class="amz-summary-box" data-fee="<?= number_format(((float)ETA_FEE / 100), 2, '.', '') ?>">
+                        <h6 class="mb-3">Order Summary</h6>
+                        <div class="amz-row"><span>Country</span><strong><?= htmlspecialchars($formCountry, ENT_QUOTES, 'UTF-8') ?></strong></div>
+                        <div class="amz-row"><span>Travellers</span><strong id="sum-travellers">1</strong></div>
+                        <div class="amz-row"><span>Plan</span><strong id="sum-plan">Standard</strong></div>
+                        <div class="amz-row"><span>Fee / Traveller</span><strong id="sum-fee">INR 0.00</strong></div>
+                        <div class="amz-row"><span>Estimated Total</span><strong id="sum-total">INR 0.00</strong></div>
+                        <div class="amz-divider"></div>
+                        <div class="amz-safe"><i class="fas fa-lock me-2"></i>Secure checkout with encrypted payment</div>
+                        <div class="amz-safe"><i class="fas fa-file-pdf me-2"></i>Receipt and form details PDF on email</div>
+                    </div>
+                </aside>
+            </div>
 
             <div class="d-flex justify-content-between align-items-center mt-4">
                 <button class="btn btn-light btn-custom" id="btn-payment-back">
@@ -898,6 +938,28 @@ function countryOpts(array $countries, string $placeholder = 'Select country...'
 </div><!-- row -->
 </div><!-- container -->
 </section>
+</div>
+
+<!-- Review Edit Modal -->
+<div class="modal fade" id="reviewEditModal" tabindex="-1" aria-labelledby="reviewEditModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reviewEditModalLabel">Edit Traveller Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="review-edit-form">
+                <div class="modal-body">
+                    <input type="hidden" id="review-edit-traveller-num" name="traveller_num" value="0">
+                    <div class="row g-3" id="review-edit-fields"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Details</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <!-- FOOTER -->
@@ -940,6 +1002,9 @@ function countryOpts(array $countries, string $placeholder = 'Select country...'
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/js/intlTelInput.min.js"></script>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+window.DEV_START_CARD = <?= json_encode($devStartCard) ?>;
+</script>
 
 <script>
 // ═══════════════════════════════════════════════════════════

@@ -1,3 +1,7 @@
 <?php
 declare(strict_types=1);
-require __DIR__ . '/pages/form-canada.php';
+
+require_once __DIR__ . '/app/bootstrap.php';
+require_once __DIR__ . '/app/Controllers/Web/FormPageController.php';
+
+FormPageController::render('Canada');

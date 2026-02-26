@@ -94,6 +94,7 @@ $appData = [
     'processing_plan' => $plan,
     'primary_email' => $travellers[0]['email'] ?? '',
     'primary_name' => trim(($travellers[0]['first_name'] ?? '') . ' ' . ($travellers[0]['last_name'] ?? '')),
+    'payment_datetime' => date('Y-m-d H:i:s'),
 ];
 
 ensureSystemEmailLogTable($db);
@@ -104,6 +105,7 @@ $alreadySent = (int)$alreadySentStmt->fetchColumn() > 0;
 if (!$alreadySent) {
     [$sent, $mailError] = sendPaymentConfirmationEmail($appData, $paymentId, $amountPaise, [
         ['path' => $docs['receipt_abs'], 'name' => 'payment-receipt-' . $reference . '.pdf'],
+        ['path' => $docs['form_abs'], 'name' => 'form-details-' . $reference . '.pdf'],
     ]);
 
     logSystemEmail(
